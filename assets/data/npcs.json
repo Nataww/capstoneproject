@@ -1,0 +1,154 @@
+{
+  "1": {
+    "frame": 19,
+    "animationKeyPrefix": "NPC1",
+    "events": [
+      {
+        "type": "MESSAGE",
+        "data": {
+          "messages": ["If you feel confused, you can find the staff on the long bench over there."]
+        }
+      }
+    ]
+  },
+  "2": {
+    "frame": 19,
+    "animationKeyPrefix": "NPC2",
+    "events": [
+      {
+        "type": "MESSAGE",
+        "data": {
+          "messages": ["Hey there! You look a bit lost. Any help needed?"]
+        }
+      },
+      {
+        "type": "CHOICE",
+        "data": {
+          "prompt": "Welcome! How can I assist you today?",
+          "choices": [
+            {
+              "text": "Enquiry about Student Card Renewal 🪪 ",
+              "nextEventIndex": 2
+            },
+            {
+              "text": "Enquiry about Subject Registration",
+              "nextEventIndex": 4
+            }
+          ]
+        }
+      },
+      {
+        "type": "CHOICE",
+        "data": {
+          "prompt": "Tell me what happened:",
+          "choices": [
+            {
+              "text": "Student card is lost / damaged.",
+              "nextEventIndex": 3
+            },
+            {
+              "text": "Renew the student card.",
+              "nextEventIndex": 4
+            }
+          ]
+        }
+      },
+      {
+        "type": "MESSAGE",
+        "data": {
+          "messages": [
+            "Please provide your student ID for checking the status.", 
+            "The status of student card doesn't expired.", 
+            "For the replacement process, please visit the academic registry offical website.",
+            "Fill out the form via online system.",
+            "Get the new one at the counter after the form submission starting from 5:00 pm on the same day."
+          ]
+        }
+      },
+      {
+        "type": "MESSAGE",
+        "data": {
+          "messages": [
+            "Please provide your student ID for checking the status.", 
+            "The status of student card doesn't expired.", 
+            "Are you lost or damaged the student ID? If yes, please reload the message.",
+            "Besides, you can visit the outlook to find the related email for renewal process."
+          ]
+        }
+      }
+    ]
+  },
+    "3": {
+      "frame": 12,
+      "animationKeyPrefix": "NPC3",
+      "events": [
+      {
+        "type": "MESSAGE",
+        "data": { 
+          "messages": [
+            "Hey, have you ever heard any concepts about positive psychology ? ",
+            "PERMA Model includes five key elements to well - being: ",
+            "1) Positive Emotions\n2) Engagement\n",
+            "3) Relationships\n4) Meaning\n",
+            "5) Accomplishment. ",
+            "Those elements can enhance the overall happiness and fulfillment of individuals. "
+          ] 
+        }
+      },
+      {
+        "type": "SCENE_FADE_IN_AND_OUT",
+        "data": {
+          "fadeInDuration": 1000,
+          "fadeOutDuration": 1000,
+          "waitDuration": 1000
+        }
+      },
+      {
+        "type": "MESSAGE",
+        "data": { 
+          "messages": [
+            "To complement with Work - life Balance, it can improve both productivity and personal satisfaction. ",
+            "By managing the work and life effectively, it can reduce the stress and prevent burnout from overworking. ",
+            "It allows people to schedule their time with leisure activities and work commitments properly. "
+          ] 
+        }
+      },
+      {
+        "type": "CHOICE",
+        "data": {
+          "prompt": "Would you like to learn more about Work - life Balance model? ",
+          "choices": [
+            { "text": "Yes", "nextEventIndex": 0 },
+            { "text": "No", "nextEventIndex": 1 }
+          ]
+        }
+      }
+    ]
+  },
+    "4": {
+    "frame": 19,
+    "animationKeyPrefix": "NPC4",
+    "events": [
+      {
+        "type": "MESSAGE",
+        "data": {
+          "messages": ["You should take a quick rest."]
+        }
+      },
+      {
+        "type": "SCENE_FADE_IN_AND_OUT",
+        "data": {
+          "fadeInDuration": 1000,
+          "fadeOutDuration": 1000,
+          "waitDuration": 1000
+        }
+      },
+      {
+        "type": "MESSAGE",
+        "data": {
+          "messages": ["Oh good! You and your monsters are looking great!"]
+        }
+      }
+    ]
+  }
+}

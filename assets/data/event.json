@@ -1,0 +1,66 @@
+{
+    "1": {
+      "frame": 19,
+      "animationKeyPrefix": "NPC1",
+      "events": [
+        {
+          "type": "MESSAGE",
+          "data": {
+            "messages": ["Hello, I noticed you seem a bit frazzled."]
+          }
+        },
+        {
+          "type": "SCENE_FADE_IN_AND_OUT",
+          "data": {
+            "fadeInDuration": 1200,
+            "fadeOutDuration": 800,
+            "waitDuration": 1000
+          }
+        },
+        {
+          "type": "MESSAGE",
+            "data": {
+              "messages": ["Oh you lost your student ID."]
+          }
+        }, 
+        {
+          "type": "MESSAGE",
+            "data": {
+              "messages": ["Don't worry! The academic registry will help you with that. "]          
+            }
+        },
+        {
+          "type": "MESSAGE",
+            "data": {
+              "messages": ["You can simply ask AR staff for the detail of renewal. "]          
+            }
+        }
+        ]
+    },
+    "2": {
+      "frame": 19,
+      "animationKeyPrefix": "NPC2",
+      "events": [
+        {
+          "type": "MESSAGE",
+          "data": {
+            "messages": ["Hello, I noticed you seem a bit frazzled."]
+          }
+        },
+        {
+          "type": "SCENE_FADE_IN_AND_OUT",
+          "data": {
+            "fadeInDuration": 1200,
+            "fadeOutDuration": 800,
+            "waitDuration": 1000
+          }
+        },
+        {
+          "type": "MESSAGE",
+            "data": {
+              "messages": ["Oh you lost your student ID."]
+          }
+        }
+      ]
+    }
+}

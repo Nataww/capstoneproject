@@ -1,0 +1,42 @@
+{
+  "introduction": {
+    "dialogues": [
+      {
+        "speaker": "Mentor",
+        "text": "Welcome to Hong Kong Polytechnic University!"
+      },
+      {
+        "speaker": "Mentor",
+        "text": "Hong Kong Polytechnic University is a vibrant institution that focuses on applied research and practical learning."
+      },
+      {
+        "speaker": "Mentor",
+        "text": "This game is designed to explore university life and discover the available resources."
+      },
+      {
+        "speaker": "Mentor",
+        "text": "In game, you can navigate to different locations by simply pressing SpaceKey and complete tasks by interacting with various characters."
+      },
+      {
+        "speaker": "Mentor",
+        "text": "You will face various challenges and opportunities throughout your university journey."
+      },
+      {
+        "speaker": "Mentor",
+        "text": "You can get the insight as coping strategies when exploring the simulation of campus."
+      },
+      {
+        "speaker": "Mentor",
+        "text": "These skills will help you manage stress and balance your academic and personal life."
+      },
+      {
+        "speaker": "Mentor",
+        "text": "Are you ready to start your journey and unlock your potential at PolyU? Let's dive in!"
+      },
+      {
+        "speaker": "Player",
+        "text": "I lost my student ID card in the restaurant. What should I do?"
+      }
+    ]
+  }
+}
