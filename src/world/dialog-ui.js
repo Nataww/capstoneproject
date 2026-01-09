@@ -100,6 +100,14 @@ export class DialogUi {
   }
 
   showDialogModal(messages) {
+    
+    this.clearChoices();
+
+    if (this.#currentTextAnimationEvent) {
+      this.#currentTextAnimationEvent.remove();
+      this.#currentTextAnimationEvent = undefined;
+    }
+
     this.#messagesToShow = [...messages];
 
     this.#resizeToCamera();
@@ -117,20 +125,26 @@ export class DialogUi {
   }
   
   showNextMessage() {
-    if (this.#messagesToShow.length === 0) {
-      return;
-    }
-
-    this.#uiText.setText('').setAlpha(1);
-    this.#currentMessageBeingAnimated = this.#messagesToShow.shift() || '';
-    this.#currentTextAnimationEvent = this.#animateText(this.#uiText, this.#currentMessageBeingAnimated, {
-      delay: 50,
-      callback: () => {
-        this.#textAnimationPlaying = false;
+      if (this.#currentTextAnimationEvent) {
+        this.#currentTextAnimationEvent.remove();
         this.#currentTextAnimationEvent = undefined;
-      },
-    });
-    this.#textAnimationPlaying = true;
+      }
+
+      if (this.#messagesToShow.length === 0) {
+        return;
+      }
+
+      this.#uiText.setText('').setAlpha(1);
+      this.#currentMessageBeingAnimated = this.#messagesToShow.shift() || '';
+      
+      this.#currentTextAnimationEvent = this.#animateText(this.#uiText, this.#currentMessageBeingAnimated, {
+        delay: 50,
+        callback: () => {
+          this.#textAnimationPlaying = false;
+          this.#currentTextAnimationEvent = undefined;
+        },
+      });
+      this.#textAnimationPlaying = true;
   }
 
   hideDialogModal() {

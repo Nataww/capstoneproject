@@ -1,6 +1,7 @@
 import Phaser from '../lib/phaser.js';
 import { DIRECTION } from '../common/direction.js';
 import { getTargetPosition } from '../utils/grid.js';
+import { TILE_SIZE } from '../config.js';
 
 export class Character {
     _scene;
@@ -158,8 +159,13 @@ export class Character {
         }
 
         const collidesWithACharacter = this._otherCharactersToCheckForCollision.some((character) => {
-            return ((character._targetPosition.x === x) && (character._targetPosition.y === y)) || 
-            ((character._previoustargetPosition.x === x) && (character._previoustargetPosition.y === y));
+            const charX = Math.round(character._targetPosition.x / TILE_SIZE) * TILE_SIZE;
+            const charY = Math.round(character._targetPosition.y / TILE_SIZE) * TILE_SIZE;
+            
+            const targetX = Math.round(x / TILE_SIZE) * TILE_SIZE;
+            const targetY = Math.round(y / TILE_SIZE) * TILE_SIZE;
+
+            return (charX === targetX && charY === targetY);
         });
         return collidesWithACharacter;
     }
