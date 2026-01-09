@@ -1,8 +1,10 @@
 import Phaser from '../lib/phaser.js';
 import { SCENE_KEYS } from './scene-keys.js';
 import { MINI_GAME_ASSETS_KEYS } from '../assets/asset-keys.js';
+import { Control } from '../utils/data.js';
 
 export class MiniGameScene extends Phaser.Scene {
+  #control;
   constructor() {
     super({ key: SCENE_KEYS.MINI_GAME_SCENE });
   }
@@ -13,6 +15,7 @@ export class MiniGameScene extends Phaser.Scene {
     this.balance = 50;
     this.score = 0;
     this.chosenChoices = [];  
+    this.#control = new Control();
   }
 
 
@@ -24,49 +27,38 @@ export class MiniGameScene extends Phaser.Scene {
 
     this.messageText = this.add.text(width / 2, height - 80, '', { fontSize: '24px', color: '#ffffff', align: 'center' }).setOrigin(0.5);
 
-    this.playerSprite = this.add.sprite(this.scale.width / 2, this.scale.height / 2, MINI_GAME_ASSETS_KEYS.MINI_GAME_CHARACTERS, 0) // add frame 0
+    this.player = this.add.sprite(this.scale.width / 2, this.scale.height / 2, MINI_GAME_ASSETS_KEYS.MINI_GAME_CHARACTERS, 0) 
       .setScale(2)  
       .setDepth(10)
       .setOrigin(0.5, 0.5);
 
-    // Content box for scenario description
-    const descBoxW = width - 80;
-    const descBoxH = 120;
-    console.log('descBoxW:', descBoxW, 'descBoxH:', descBoxH);
-    this.descContainer = this.add.container(40, 18);
-    const descBoxBg = this.add.rectangle(0, 0, descBoxW, descBoxH, 0x1a1a1a).setOrigin(0);
-    descBoxBg.setStrokeStyle(3, 0x444444);
-    descBoxBg.setAlpha(0.7);
-    this.descText = this.add.text(20, 20, '', { fontSize: '20px', color: '#ffffff', wordWrap: { width: descBoxW - 40 } }).setOrigin(0, 0);
-    this.descContainer.add([descBoxBg, this.descText]);
-    this.descContainer.setDepth(15);
+    // container for description 
+    this.descriptionContainer = this.add.container(40, 18).setDepth(15);
+    const descriptionContainerBg = this.add.rectangle(0, 0, 944, 120, 0x1a1a1a).setOrigin(0);
+    descriptionContainerBg.setStrokeStyle(3, 0x444444).setAlpha(0.7);
+    this.descriptionText = this.add.text(20, 20, '', { fontSize: '20px', color: '#ffffff', wordWrap: { width: 944 - 40 } }).setOrigin(0, 0);
+    this.descriptionContainer.add([descriptionContainerBg, this.descriptionText]);
 
-    // Balance Scale graphics
-    this.balanceGraphics = this.add.graphics({ x: width / 2, y: height / 2 });
-    
-    // label for work or life
-    this.workLabel = this.add.text(this.balanceGraphics.x - 250, this.balanceGraphics.y, 'Work', {
+    // balance and labels
+    this.balanceRect = this.add.graphics({ x: width / 2, y: height / 2 });
+    this.workLabel = this.add.text(this.balanceRect.x - 250, this.balanceRect.y, 'Work', {
         fontSize: '24px', color: '#ff6666', fontStyle: 'bold'
     }).setOrigin(0.5).setDepth(12);
-    this.lifeLabel = this.add.text(this.balanceGraphics.x + 250, this.balanceGraphics.y, 'Life', {
+    this.lifeLabel = this.add.text(this.balanceRect.x + 250, this.balanceRect.y, 'Life', {
         fontSize: '24px', color: '#66ff66', fontStyle: 'bold'
     }).setOrigin(0.5).setDepth(12);
 
     // Centered balance value shown below the balance bar
-    this.balanceCenterText = this.add.text(this.balanceGraphics.x, this.balanceGraphics.y + 30, `Balance: ${this.balance}%`, { fontSize: '20px', color: '#ffffff' }).setOrigin(0.5);
+    this.balanceCenterText = this.add.text(this.balanceRect.x, this.balanceRect.y + 30, `Balance: ${this.balance}%`, { fontSize: '20px', color: '#ffffff' }).setOrigin(0.5);
     this.balanceCenterText.setDepth(12);
 
     // content box of choices
-    const boxY = height - 200;
-    const boxW = width - 80;
-    const boxH = 160;
-    console.log('boxW:', boxW, 'boxH:', boxH, 'boxY:', boxY);
-    this.contentContainer = this.add.container(40, boxY);
-    this.contentText = this.add.text(20, 20, '', { fontSize: '28px', color: '#ffffff', wordWrap: { width: boxW - 40 } }).setOrigin(0, 0);
+    this.contentContainer = this.add.container(40, 376);
+    this.contentText = this.add.text(20, 20, '', { fontSize: '28px', color: '#ffffff', wordWrap: { width: 864 - 40 } }).setOrigin(0, 0);
     this.contentContainer.add(this.contentText);
     this.contentContainer.setDepth(20);
 
-    this._choiceArea = { x: 40, y: boxY, w: boxW, h: boxH };
+    this._choiceArea = { x: 40, y: 376, w: 864, h: 160 };
 
     // Container to hold choice buttons
     this.choiceButtons = [];
@@ -78,33 +70,28 @@ export class MiniGameScene extends Phaser.Scene {
       this.descContainer,
       this.contentContainer,
       this.choiceContainer,
-      this.balanceGraphics,
+      this.balanceRect,
       this.balanceCenterText,
       this.messageText,
     ];
 
-    // Scenarios loaded from external JSON file
     this.scenarios = this.cache.json.get(MINI_GAME_ASSETS_KEYS.MINI_GAME_SCENARIOS) || [];
     if (!this.scenarios.length) {
-      console.warn('No scenarios found in cache `scenarios` — defaulting to empty list.');
+      console.warn('${MiniGameScene.name}: No scenarios found in the loaded data.');
     }
-
     this.updatePlayerDirection();
 
     // Add background music
     this.backgroundMusic = this.sound.add(MINI_GAME_ASSETS_KEYS.MINI_GAME_MUSIC, {
         loop: true, volume: 0.4, mute: false });
-
-    // Slow it down to half speed
     this.backgroundMusic.setRate(0.7);
-
-    // Start playing after user interaction (required on mobile to avoid autoplay block)
     this.sound.once(Phaser.Sound.Events.UNLOCKED, () => {
         if (!this.backgroundMusic.isPlaying) {
             this.backgroundMusic.play();
         }
     });
 
+    // Add sound effect
     this.popupSound = this.sound.add(MINI_GAME_ASSETS_KEYS.MINI_GAME_POPUP_SOUND, { volume: 0.5 });
     this.drawBalanceScale();
 
@@ -113,7 +100,6 @@ export class MiniGameScene extends Phaser.Scene {
     this.showStartScreen();
   }
 
-  // stop the music when changing scenes
   shutdown() {
       if (this.backgroundMusic) {
           this.backgroundMusic.stop();
@@ -131,10 +117,8 @@ export class MiniGameScene extends Phaser.Scene {
     const w = this.scale.width;
     const h = this.scale.height;
     const overlay = this.add.rectangle(0, 0, w, h, 0x000000, 0.4).setOrigin(0).setDepth(1000);
-    const boxW = Math.min(700, w - 120);
-    const boxH = 120;
-    const popupBg = this.add.rectangle(w / 2, h / 2, boxW, boxH, 0x111111).setStrokeStyle(3, 0x444444).setDepth(1001);
-    const popupText = this.add.text(w / 2, h / 2, message, { fontSize: '28px', color: '#ffffff', align: 'center', wordWrap: { width: boxW - 40 } }).setOrigin(0.5).setDepth(1002);
+    const popupBg = this.add.rectangle(w / 2, h / 2, 864, boxH, 0x111111).setStrokeStyle(3, 0x444444).setDepth(1001);
+    const popupText = this.add.text(w / 2, h / 2, message, { fontSize: '28px', color: '#ffffff', align: 'center', wordWrap: { width: 864 - 40 } }).setOrigin(0.5).setDepth(1002);
 
     // simple tween for pop-in
     popupBg.alpha = 0;
@@ -175,10 +159,9 @@ export class MiniGameScene extends Phaser.Scene {
     const overlay = this.add.rectangle(0, 0, w, h, 0x000000, 0.35).setOrigin(0).setDepth(1000);
 
     // center container (slightly transparent panel)
-    const boxW = Math.min(800, w - 120);
     const boxH = Math.min(420, h - 200);
     const panel = this.add.container(w / 2, h / 2).setDepth(1001);
-    const panelBg = this.add.rectangle(0, 0, boxW, boxH, 0x111111).setStrokeStyle(3, 0x444444).setOrigin(0.5);
+    const panelBg = this.add.rectangle(0, 0, 864, boxH, 0x111111).setStrokeStyle(3, 0x444444).setOrigin(0.5);
     panelBg.setAlpha(0.6);
     panel.add(panelBg);
 
@@ -194,9 +177,9 @@ export class MiniGameScene extends Phaser.Scene {
         '4) Keep in balance to achieve the best outcome!',
     ];
 
-    const rulesX = -boxW / 2 + 30;
+    const rulesX = -864 / 2 + 30;
     let ry = -boxH / 2 + 70;
-    const ruleStyle = { fontSize: '18px', color: '#ffffff', wordWrap: { width: boxW - 80 } };
+    const ruleStyle = { fontSize: '18px', color: '#ffffff', wordWrap: { width: 864 - 80 } };
     rules.forEach((line) => {
       const t = this.add.text(rulesX, ry, line, ruleStyle).setOrigin(0, 0);
       panel.add(t);
@@ -209,38 +192,31 @@ export class MiniGameScene extends Phaser.Scene {
     startBg.setInteractive({ useHandCursor: true });
 
     const startHandler = () => {
-      if (this._startStarted) return; // ignore duplicate triggers
+      if (this._startStarted) return;
       this._startStarted = true;
 
-      try {
-        safeTargets.forEach(t => {
+      // restore previous visibility
+      safeTargets.forEach(t => {
+        const prev = this._startPrevVisibility.get(t);
+        if (typeof prev === 'boolean') {
           try {
-            const prev = this._startPrevVisibility.get(t);
-            if (typeof prev === 'boolean') {
-              if (typeof t.setVisible === 'function') t.setVisible(prev);
-              else if (typeof t.visible !== 'undefined') t.visible = prev;
-            }
+            if (typeof t.setVisible === 'function') t.setVisible(prev);
+            else if (typeof t.visible !== 'undefined') t.visible = prev;
           } catch (e) {}
-        });
-        // background remains visible; nothing to restore for bgImage
-      } catch (e) {}
+        }
+      });
 
-      // remove start UI and begin scenarios
-      try { overlay.destroy(); } catch (e) {}
-      try { panel.destroy(true); } catch (e) {}
+      // destroy start screen elements
+      overlay.destroy();
+      panel.destroy();
 
-      // detach listeners now that the game is starting
-      if (this._startScreen && this._startScreen.spaceKey) {
-        try { this._startScreen.spaceKey.off('down', startHandler); } catch (e) {}
-      }
-
+      // start the first scenario
       this.showScenario();
-    };
+    }
 
     startBg.on('pointerdown', startHandler);
     panel.add([startBg, startText]);
 
-    // allow clicking the overlay to start as well (helps touch users)
     overlay.setInteractive({ useHandCursor: true });
     overlay.on('pointerdown', startHandler);
 
@@ -252,27 +228,27 @@ export class MiniGameScene extends Phaser.Scene {
   }
 
   drawBalanceScale() {
-    this.balanceGraphics.clear();
+    this.balanceRect.clear();
 
     // Left bar: Work (red)
-    this.balanceGraphics.fillStyle(0xff0000, 1);
-    this.balanceGraphics.fillRect(-200, -10, 200, 20);
+    this.balanceRect.fillStyle(0xff0000, 1);
+    this.balanceRect.fillRect(-200, -10, 200, 20);
 
     // Right bar: Life (green)
-    this.balanceGraphics.fillStyle(0x00ff00, 1);
-    this.balanceGraphics.fillRect(0, -10, 200, 20);
+    this.balanceRect.fillStyle(0x00ff00, 1);
+    this.balanceRect.fillRect(0, -10, 200, 20);
 
     const pos = (this.balance / 100) * 400 - 200;
 
     // Arrow triangle
-    this.balanceGraphics.fillStyle(0xffffff, 1);
-    this.balanceGraphics.fillTriangle(pos - 10, -30, pos + 10, -30, pos, -10);
-    this.balanceGraphics.lineStyle(2, 0x222222, 0.8);
-    this.balanceGraphics.strokeTriangle(pos - 10, -30, pos + 10, -30, pos, -10);
+    this.balanceRect.fillStyle(0xffffff, 1);
+    this.balanceRect.fillTriangle(pos - 10, -30, pos + 10, -30, pos, -10);
+    this.balanceRect.lineStyle(2, 0x222222, 0.8);
+    this.balanceRect.strokeTriangle(pos - 10, -30, pos + 10, -30, pos, -10);
 
     // Position player sprite on the arrow
-    if (this.playerSprite) {
-        this.playerSprite.setPosition(this.balanceGraphics.x + pos, this.balanceGraphics.y - 58);
+    if (this.player) {
+        this.player.setPosition(this.balanceRect.x + pos, this.balanceRect.y - 58);
     }
 
     if (this.balanceCenterText) {
@@ -283,7 +259,7 @@ export class MiniGameScene extends Phaser.Scene {
 }
 
   updatePlayerDirection() {
-    if (!this.playerSprite) return;
+    if (!this.player) return;
 
     let frame = 0;
 
@@ -291,7 +267,7 @@ export class MiniGameScene extends Phaser.Scene {
     else if (this.balance > 50) frame = 0; // right
     else frame = 3; // front
     
-    this.playerSprite.setFrame(frame);
+    this.player.setFrame(frame);
  }
 
   showScenario() {
@@ -301,7 +277,7 @@ export class MiniGameScene extends Phaser.Scene {
     }
 
     const scenario = this.scenarios[this.currentScenario];
-    this.descText.setText(scenario.description);
+    this.descriptionText.setText(scenario.description);
     this.clearChoices();
     this.createChoiceButtons(scenario);
     this.choicesVisible = true;
@@ -396,10 +372,9 @@ export class MiniGameScene extends Phaser.Scene {
     const overlay = this.add.rectangle(0, 0, 1024, 576, 0xffffff, 0.9).setOrigin(0).setDepth(1000);
 
     // centered info box
-    const boxW = Math.min(800, w - 100);
     const boxH = Math.min(500, h - 150);
     const panel = this.add.container(w / 2, h / 2).setDepth(1001);
-    const panelBg = this.add.rectangle(0, 0, boxW, boxH, 0x111111).setStrokeStyle(3, 0x444444).setOrigin(0.5);
+    const panelBg = this.add.rectangle(0, 0, 864, boxH, 0x111111).setStrokeStyle(3, 0x444444).setOrigin(0.5);
     panelBg.setAlpha(1);
     panel.add(panelBg);
 
@@ -425,10 +400,9 @@ export class MiniGameScene extends Phaser.Scene {
     else if (this.balance > 70) finalMessage = 'You are too relaxed! Please study more and focus on work!';
     else finalMessage = "Please keep the good balance between work and life!";
 
-    const messageText = this.add.text(0, y + 150, finalMessage, { fontSize: '24px', color: '#ffff00', fontStyle: 'bold', wordWrap: { width: boxW - 300 } }).setOrigin(0.5);
+    const messageText = this.add.text(0, y + 150, finalMessage, { fontSize: '24px', color: '#ffff00', fontStyle: 'bold', wordWrap: { width: 864 - 300 } }).setOrigin(0.5);
     panel.add(messageText);
 
-    // Button area: Restart and Go To World
     const btnY = boxH / 2 - 60;
     const btnW = 220;
     const btnH = 48;
