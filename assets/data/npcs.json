@@ -32,7 +32,7 @@
             },
             {
               "text": "Enquiry about Subject Registration",
-              "nextEventIndex": 4
+              "nextEventIndex": 5
             }
           ]
         }
@@ -56,6 +56,7 @@
       {
         "type": "MESSAGE",
         "data": {
+          "isEnd": true,
           "messages": [
             "Please provide your student ID for checking the status.", 
             "The status of student card doesn't expired.", 
@@ -68,11 +69,23 @@
       {
         "type": "MESSAGE",
         "data": {
+          "isEnd": true,
           "messages": [
             "Please provide your student ID for checking the status.", 
             "The status of student card doesn't expired.", 
             "Are you lost or damaged the student ID? If yes, please reload the message.",
             "Besides, you can visit the outlook to find the related email for renewal process."
+          ]
+        }
+      },
+      {
+        "type": "MESSAGE",
+        "data": {
+          "isEnd": true,
+          "messages": [
+            "You can get information about subject registration via the academic registry official website.", 
+            "Please check the timetable and pre - course before registering the subjects.",
+            "Please manage your time effectively to avoid any conflicts between classes."
           ]
         }
       }
@@ -126,13 +139,13 @@
     ]
   },
     "4": {
-    "frame": 19,
+    "frame": 12,
     "animationKeyPrefix": "NPC4",
     "events": [
       {
         "type": "MESSAGE",
         "data": {
-          "messages": ["You should take a quick rest."]
+          "messages": ["You can get information for PERMA model from NPC in front of me."]
         }
       },
       {
@@ -141,12 +154,6 @@
           "fadeInDuration": 1000,
           "fadeOutDuration": 1000,
           "waitDuration": 1000
-        }
-      },
-      {
-        "type": "MESSAGE",
-        "data": {
-          "messages": ["Oh good! You and your monsters are looking great!"]
         }
       }
     ]

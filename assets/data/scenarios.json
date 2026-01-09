@@ -1,0 +1,66 @@
+[
+    {
+        "description": "You have a project due on Monday afternoon, but your peers have invited you to attend a party with them. How will you prioritize work or schedule time for unwinding? .",
+        "choices": [
+            { "text": "Attend the party and work on the project later.", "work": -10, "life": 0 },
+            { "text": "Skip the party and focus on the project.", "work": 0, "life": -10 },
+            { "text": "Work few on project then attend the party.", "work": 0, "life": 0 }
+        ]
+    },
+    {
+        "description": "A group project is closing to the deadline. The workload of each teammate is uneven and a meeting is suggested for reallocate tasks. How do you handle the situation?",
+        "choices": [
+            { "text": "Take on more tasks to help the team meet the deadline.", "work": 0, "life": -10 },
+            { "text": "Suggest redistributing tasks as member availability.", "work": 0, "life": 0 },
+            { "text": "Focus on assigned tasks, let others manage workload.", "work": -10, "life": 0 }
+        ]
+    },
+    {
+        "description": "It is going to have midterms in coming weekend and friend is invited to go for hiking. Will you attend the hiking or prepare for the midterms?",
+        "choices": [
+            { "text": "Attend the invitation and study later.", "work": -10, "life": 0 },
+            { "text": "Study the material and reject the invitation.", "work": 0, "life": -10 },
+            { "text": "Study midterm early for reserve time for hiking.", "work": 0, "life": 0 }
+        ]
+    },
+    {
+        "description": "A famous film has released and an assignment is nearly to the due date. How do you balance the leisure time and work?",
+        "choices": [
+            { "text": "Watch the film and complete the assignment at midnight.", "work": -10, "life": 0 },
+            { "text": "Complete the assignment first", "work": 0, "life": -10 },
+            { "text": "Allocate time for both activities.", "work": 0, "life": 0 }
+        ]
+    },
+    {
+        "description": "The application of oversea exchange, you are going to study abroad later. If a job offer is received at same time, what do you choose?",
+        "choices": [
+            { "text": "Accept the job offer and cancel the exchange plans.", "work": 0, "life": -10 },
+            { "text": "Process the plan and decline the job offer.", "work": -10, "life": 0 },
+            { "text": "Negotiate about on board with the employer.", "work": 0, "life": 0 }
+        ]
+    },
+    {
+        "description": "A volunteer Work is scheduled on this weekend, but there is a meeting with academic advisor at the same time. How do you choose?",
+        "choices": [
+            { "text": "Attend volunteer work and ask to reschedule meeting.", "work": -10, "life": 0 },
+            { "text": "Attend the meeting and reject volunteer work.", "work": 0, "life": -10 },
+            { "text": "Reschedule by informing both parties.", "work": 0, "life": 0 }
+        ]
+    },
+    {
+        "description": "A partime job offers extra shifts this weekend, but it conflicts with the family gathering. How do you handle this situation?",
+        "choices": [
+            { "text": "Take the extra shifts and reject invitation.", "work": 0, "life": -10 },
+            { "text": "Reject the offers and attend the family gathering.", "work": -10, "life": 0 },
+            { "text": "Reschedule by informing both parties.", "work": 0, "life": 0 }
+        ]
+    },
+    {
+        "description": "A new game is going to release within the period of examinations. How do you manage your time between gaming and studying?",
+        "choices": [
+            { "text": "Schedule more time on gaming.", "work": -10, "life": 0 },
+            { "text": "Study material and decline plans of game.", "work": 0, "life": -10 },
+            { "text": "Allocate specific time for gaming.", "work": 0, "life": 0 }
+        ]
+    }
+]

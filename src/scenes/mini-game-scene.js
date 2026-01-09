@@ -373,9 +373,9 @@ export class MiniGameScene extends Phaser.Scene {
     this.tweens.add({ targets: popUp, y: 50, alpha: 0, duration: 2000, onComplete: () => popUp.destroy() });
 
     let message = '';
-    if (this.balance < 30) message = 'Uh-oh, too much work!';
-    else if (this.balance > 70) message = 'Enjoying life a bit too much?';
-    else message = "You're crushing it!";
+    if (this.balance < 30) message = 'You need to take rest!';
+    else if (this.balance > 70) message = 'Focus more on work?';
+    else message = "Well done!";
     this.showPopupMessage(message, 2000);
     this.popupSound.play();
 
@@ -419,17 +419,14 @@ export class MiniGameScene extends Phaser.Scene {
     const balanceText = this.add.text(-360, y + 40, `Final Balance: ${this.balance}%`, statStyle).setOrigin(0, 0);
     panel.add(balanceText);
 
-    const maxLines = Math.floor((boxH - (y + 80 + boxH / 2)) / 28) || 6;
-    if (this.chosenChoices.length > 0) {
-      const choicesTitle = this.add.text(-360, y + 80, 'Your Choices:', { fontSize: '22px', color: '#ffffff', fontStyle: 'bold' }).setOrigin(0, 0);
-      panel.add(choicesTitle);
-    }
-    else {
-      const noChoicesText = this.add.text(-360, y + 80, 'No choices were made.', { fontSize: '20px', color: '#ffffff' }).setOrigin(0, 0);
-      panel.add(noChoicesText);
-    }
-   
-    // provide some items to express the work-life balance journey
+    // if the balance larger than 70 or less than 30, show a message
+    let finalMessage = '';
+    if (this.balance < 30) finalMessage = 'You should take a quick rest and reschedule with more leisure time!';
+    else if (this.balance > 70) finalMessage = 'You are too relaxed! Please study more and focus on work!';
+    else finalMessage = "Please keep the good balance between work and life!";
+
+    const messageText = this.add.text(0, y + 150, finalMessage, { fontSize: '24px', color: '#ffff00', fontStyle: 'bold', wordWrap: { width: boxW - 300 } }).setOrigin(0.5);
+    panel.add(messageText);
 
     // Button area: Restart and Go To World
     const btnY = boxH / 2 - 60;

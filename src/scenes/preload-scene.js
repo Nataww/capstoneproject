@@ -1,13 +1,5 @@
-import {
-  CHARACTER_ASSET_KEYS,
-  PLAYER_ASSET_KEYS,
-  UI_ASSET_KEYS,
-  WORLD_ASSET_KEYS,
-  DATA_ASSET_KEYS,
-  MINI_GAME_ASSETS_KEYS,
-  TITLE_ASSET_KEYS,
-  CONVERSATION_ASSET_KEYS
-} from '../assets/asset-keys.js';
+import { CHARACTER_ASSET_KEYS, PLAYER_ASSET_KEYS, UI_ASSET_KEYS, WORLD_ASSET_KEYS,
+  DATA_ASSET_KEYS, MINI_GAME_ASSETS_KEYS, TITLE_ASSET_KEYS, CONVERSATION_ASSET_KEYS } from '../assets/asset-keys.js';
 import Phaser from '../lib/phaser.js';
 import { SCENE_KEYS } from './scene-keys.js';
 import { DataUtils } from '../utils/data.js';
@@ -28,9 +20,9 @@ export class PreloadScene extends Phaser.Scene {
 
     // mini game assets
     this.load.image(MINI_GAME_ASSETS_KEYS.MINI_GAME_BACKGROUND, `${imageAssetPath}/background-assets/AR_2_resized.jpg`);
-    this.load.json(MINI_GAME_ASSETS_KEYS.MINI_GAME_SCENARIOS, 'data/scenarios.json');
+    this.load.json(MINI_GAME_ASSETS_KEYS.MINI_GAME_SCENARIOS, 'assets/data/scenarios.json');
     this.load.spritesheet(MINI_GAME_ASSETS_KEYS.MINI_GAME_CHARACTERS,`${imageAssetPath}/players-assets/Adam_idle_16x16.png`, { frameWidth: 16, frameHeight: 32 });
-    this.load.audio(MINI_GAME_ASSETS_KEYS.MINI_GAME_MUSIC, ['assets/audio/mini-game-music.mp3']); // Campus Sunlight-2.mp3
+    this.load.audio(MINI_GAME_ASSETS_KEYS.MINI_GAME_MUSIC, ['assets/audio/mini-game-music.mp3']); 
     this.load.audio(MINI_GAME_ASSETS_KEYS.MINI_GAME_POPUP_SOUND, ['assets/audio/ding.mp3']);
 
     // player assets
@@ -40,7 +32,6 @@ export class PreloadScene extends Phaser.Scene {
     // data assets
     this.load.json(DATA_ASSET_KEYS.ANIMATIONS, 'assets/data/animation.json');
     this.load.json(DATA_ASSET_KEYS.NPCS, 'assets/data/npcs.json');
-    this.load.json(DATA_ASSET_KEYS.EVENTS, 'assets/data/event.json');
     this.load.json(DATA_ASSET_KEYS.INTRODUCTION, 'assets/data/introduction.json');
     
     // ui assets
@@ -49,10 +40,10 @@ export class PreloadScene extends Phaser.Scene {
 
     // world scene assets
     this.load.image(WORLD_ASSET_KEYS.WORLD_MAP, `${imageAssetPath}/map-assets/new_3.png`);
-    this.load.tilemapTiledJSON(WORLD_ASSET_KEYS.WORLD_MAIN_LEVEL, 'assets/data/level_7.json');
+    this.load.tilemapTiledJSON(WORLD_ASSET_KEYS.WORLD_MAIN_LEVEL, 'assets/data/level.json');
     this.load.image(WORLD_ASSET_KEYS.WORLD_COLLISION, `${imageAssetPath}/map-assets/collision_3.png`);
     this.load.image(WORLD_ASSET_KEYS.WORLD_ENCOUNTER, `assets/data/encounter.png`);
-    this.load.audio(WORLD_ASSET_KEYS.WORLD_MUSIC, ['assets/audio/world-music.mp3']); // Loyalty_Freak_Music_-_01_-_Go_to_the_Picnicchosic.com_(chosic.com)
+    this.load.audio(WORLD_ASSET_KEYS.WORLD_MUSIC, ['assets/audio/world-music.mp3']);
 
     // character assets
     this.load.spritesheet(CHARACTER_ASSET_KEYS.PLAYER, `${imageAssetPath}/players-assets/Adam_run_16x16.png`, {
@@ -74,6 +65,7 @@ export class PreloadScene extends Phaser.Scene {
     this.scene.start(SCENE_KEYS.TITLE_SCENE);
   }
 
+  // create animations from data.js
   #createAnimations() {
     const animations = DataUtils.getAnimations(this);
     animations.forEach((animation) => {

@@ -99,17 +99,28 @@ export class ApplicationScene extends Phaser.Scene {
             .setOrigin(0, 0.5)
             .setInteractive({ useHandCursor: true });
 
+        // Set example text based on field
+        const exampleText = this.#formData[fieldKey] || '';
+        
         // Text inside the box
-        const inputText = this.add.text(x - 190, y + 30, '', {
+        const inputText = this.add.text(x - 190, y + 30, exampleText, {
             fontSize: '16px',
-            color: '#000000',
+            color: '#6b7280', // Gray color for example text
         }).setOrigin(0, 0.5);
 
-        // Current value
-        this.#formData[fieldKey] = '';
+        // Track if this is the first click
+        let isFirstClick = true;
 
         // Click on the box to focus it
         inputBox.on('pointerdown', () => {
+            // Clear example text on first click
+            if (isFirstClick) {
+                this.#formData[fieldKey] = '';
+                inputText.setText('');
+                inputText.setColor('#000000'); // Change to normal text color
+                isFirstClick = false;
+            }
+            
             this.currentInput = { inputText, fieldKey }; // Store reference to active field
 
             // Visual feedback: change border color when focused
@@ -168,29 +179,37 @@ export class ApplicationScene extends Phaser.Scene {
         color: '#000000',
         }).setOrigin(0, 0.5);
 
+        // display an example photo thumbnail (initially hidden)
+        const photoThumbnail = this.add.rectangle(x + 150, y + 100, 250, 130, 0xe5e7eb)
+        .setStrokeStyle(2, 0x9ca3af)
+        .setOrigin(0.5)
+        .setVisible(false);
+
+        const previewText = this.add.text(x + 150, y + 100, 'Preview', {
+        fontSize: '14px',
+        color: '#6b7280',
+        align: 'center',
+        }).setOrigin(0.5)
+        .setVisible(false);
+
+        // use chi_resized.png as photoThumbnail
+        const photoImage = this.add.image(x + 150, y + 100, `${PLAYER_ASSET_KEYS.PLAYER1}`)
+        .setDisplaySize(130, 130)
+        .setOrigin(0.5)
+        .setDepth(0.5)
+        .setVisible(false);
+
         // click box to upload photo
         uploadBox.on('pointerdown', () => {
         const fakeFileName = 'student_photo.jpg';
         this.#formData[fieldKey] = fakeFileName;
         uploadText.setText(fakeFileName);
+        
+        // show the photo thumbnail
+        photoThumbnail.setVisible(true);
+        previewText.setVisible(true);
+        photoImage.setVisible(true);
         });
-
-        // display an example photo thumbnail
-        const photoThumbnail = this.add.rectangle(x + 150, y + 100, 250, 130, 0xe5e7eb)
-        .setStrokeStyle(2, 0x9ca3af)
-        .setOrigin(0.5)
-
-        this.add.text(x + 150, y + 100, 'Preview', {
-        fontSize: '14px',
-        color: '#6b7280',
-        align: 'center',
-        }).setOrigin(0.5);
-
-        // use chi_resized.png as photoThumbnail
-        this.add.image(x + 150, y + 100, `${PLAYER_ASSET_KEYS.PLAYER1}`)
-        .setDisplaySize(130, 130)
-        .setOrigin(0.5)
-        .setDepth(0.5);
         }
 
     #createDropdownField(x, y, label, fieldKey, options) {

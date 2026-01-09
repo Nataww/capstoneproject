@@ -137,45 +137,40 @@ export class WorldScene extends Phaser.Scene {
       this.#player.update(time);
       return;
     }
-    // wait player's input
+
+    
     if (this.#waitInput) {
-      const upKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.UP);
-      const downKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.DOWN);
-      const spaceKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
-      const enterKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER);
+    
+      const direction = this.#control.getDirectionKeyJustPressed();
       
-      if (Phaser.Input.Keyboard.JustDown(upKey)) {
+      if (direction === DIRECTION.UP) {
         this.#currentChoice = Math.max(0, this.#currentChoice - 1);
         this.#dialogUi.updateChoiceSelection(this.#currentChoice);
       }
       
-      if (Phaser.Input.Keyboard.JustDown(downKey)) {
+      else if (direction === DIRECTION.DOWN) {
         this.#currentChoice = Math.min(this.#currentNpcChoiceOptions.length - 1, this.#currentChoice + 1);
         this.#dialogUi.updateChoiceSelection(this.#currentChoice);
       }
-      
-      if (Phaser.Input.Keyboard.JustDown(spaceKey) || Phaser.Input.Keyboard.JustDown(enterKey)) {
+
+      if (this.#control.wasSpaceKeyPressed() || this.#control.wasEnterKeyPressed()) {
         if (this.#currentNpcChoiceOptions.length === 0) return;
 
         const selectedChoice = this.#currentNpcChoiceOptions[this.#currentChoice];
-        console.log(`Player chose: "${selectedChoice.text}" - jumping to event index ${selectedChoice.nextEventIndex}`);
+        console.log(`Player chose: "${selectedChoice.text}"`);
         
         this.#waitInput = false;
         this.#dialogUi.clearChoices();
         this.#dialogUi.hideDialogModal();
 
-        // Handle Yes/No choices for sign and NPC
         if (selectedChoice.nextEventIndex === 0) {
-          // Yes choice
           if (this.#isInteractingWithSign) {
-            console.log('Player chose YES - redirecting to application scene');
             this.#isInteractingWithSign = false;
             this.cameras.main.fadeOut(1000);
             this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
               this.scene.start(SCENE_KEYS.APPLICATION_SCENE);
             });
           } else {
-            console.log('Player chose YES - redirecting to mini-game');
             this.cameras.main.fadeOut(1000);
             this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
               this.scene.start(SCENE_KEYS.MINI_GAME_SCENE);
@@ -185,7 +180,6 @@ export class WorldScene extends Phaser.Scene {
         }
         
         else if (selectedChoice.nextEventIndex === 1) {
-          console.log('Player chose NO - staying in world scene');
           if (this.#isInteractingWithSign) {
             this.#isInteractingWithSign = false;
           }
@@ -202,6 +196,7 @@ export class WorldScene extends Phaser.Scene {
         this.#handleNpcInteraction();
         return;
       }
+      return; 
     }
 
     const selectedDirection = this.#control.getDirectionKeyPressedDown();
@@ -232,9 +227,17 @@ export class WorldScene extends Phaser.Scene {
 
     if (this.#dialogUi.isVisible && !this.#dialogUi.moreMessagesToShow) {
       if (this.#npcPlayerIsInteractingWith) {
-        this.#dialogUi.hideDialogModal();
-        this.#npcPlayerIsInteractingWith.isTalkingToPlayer = false;
-        this.#npcPlayerIsInteractingWith = undefined;
+
+        const currentEvent = this.#npcPlayerIsInteractingWith.events[this.#lastNpcEventHandledIndex];
+        if (currentEvent.type === 'MESSAGE' && currentEvent.data.isEnd) {
+            this.#dialogUi.hideDialogModal();
+            this.#npcPlayerIsInteractingWith.isTalkingToPlayer = false;
+            this.#npcPlayerIsInteractingWith = undefined;
+            this.#lastNpcEventHandledIndex = -1;
+            return;
+        }
+
+        this.#handleNpcInteraction();
       }
       if (this.#showDialog) {
         this.#dialogUi.hideDialogModal();
@@ -303,14 +306,22 @@ export class WorldScene extends Phaser.Scene {
       return;
     }
 
-    const nearbyNpc = this.#npcs.find((npc) => {
+    let nearbyNpc = this.#npcs.find((npc) => {
       const npcTileX = Math.round(npc.sprite.x / TILE_SIZE) * TILE_SIZE;
       const npcTileY = Math.round(npc.sprite.y / TILE_SIZE) * TILE_SIZE;
-      
-      console.log('Checking NPC at:', { x: npcTileX, y: npcTileY }, 'against target:', targetPosition);
       return npcTileX === targetPosition.x && npcTileY === targetPosition.y;
     });
     
+    if (!nearbyNpc) {
+      const targetPosition2 = getTargetPosition(targetPosition, this.#player.direction);
+      
+      nearbyNpc = this.#npcs.find((npc) => {
+        const npcTileX = Math.round(npc.sprite.x / TILE_SIZE) * TILE_SIZE;
+        const npcTileY = Math.round(npc.sprite.y / TILE_SIZE) * TILE_SIZE;
+        return npcTileX === targetPosition2.x && npcTileY === targetPosition2.y;
+      });
+    }
+
     if (nearbyNpc) {
       console.log('Nearby NPC found:', nearbyNpc);
       nearbyNpc.facePlayer(this.#player.direction);
@@ -412,6 +423,9 @@ export class WorldScene extends Phaser.Scene {
     if (!isMoveEventsToProcess) {
       this.#npcPlayerIsInteractingWith = undefined; 
       this.#lastNpcEventHandledIndex = -1; 
+
+      this.#dialogUi.hideDialogModal();
+
       return;
     }
 
@@ -430,7 +444,9 @@ export class WorldScene extends Phaser.Scene {
         this.#currentNpcChoiceOptions = eventToHandle.data.choices || [];
         this.#currentChoice = 0;
         this.time.delayedCall(800, () => {
-          this.#dialogUi.showChoices(this.#currentNpcChoiceOptions, this.#currentChoice);
+          if (this.#waitInput) {
+            this.#dialogUi.showChoices(this.#currentNpcChoiceOptions, this.#currentChoice);
+          }
         });
         break;
       }
