@@ -522,7 +522,7 @@ export class WorldScene extends Phaser.Scene {
         this.#EventScene2();
         break;
       default:
-        console.log(`[${WorldScene.name}:triggerEventCutscene] Unknown event ID: ${eventId}`);
+        console.log(`[${WorldScene.name}:triggerEventCutscene] Event ID: ${eventId}`);
     }
   }
 
