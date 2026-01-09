@@ -39,8 +39,8 @@ export class ConversationScene extends Phaser.Scene {
   }
 
   update() {
-    const wasSpaceKeyPressed = this.#control.wasSpaceKeyPressed();
-    if (wasSpaceKeyPressed) {
+    const SpaceKeyPressed = this.#control.getSpaceKeyPressed();
+    if (SpaceKeyPressed) {
       this.currentDialogueIndex++;
       this.dialogueTexts.forEach(text => text.destroy());
       this.dialogueTexts = [];

@@ -89,7 +89,7 @@ export class TitleScene extends Phaser.Scene {
   update() {
     if (this.#controls.isInputLocked) return;
 
-    if (this.#controls.wasSpaceKeyPressed()) {
+    if (this.#controls.getSpaceKeyPressed()) {
       this.cameras.main.fadeOut(500, 0, 0, 0);
       this.#controls.lockPlayerInput = true;
       return;

@@ -10,11 +10,13 @@ import { DialogUi } from '../world/dialog-ui.js';
 import { NPC } from '../world/npc.js';
 import { DataUtils } from '../utils/data.js';
 
+// property of sign objects 
 const SIGN_PROPERTY = Object.freeze({
   MESSAGE: 'message',
   REDIRECT_TO_APPLICATION: 'redirect_to_application',
 });
 
+// property of npc objects 
 const TILED_NPC_PROPERTY = Object.freeze({
   MOVEMENT_PATTERN: 'movement_pattern',
   FRAME: 'frame',
@@ -72,6 +74,7 @@ export class WorldScene extends Phaser.Scene {
     // create map and collision layer
     const map = this.make.tilemap({ key: WORLD_ASSET_KEYS.WORLD_MAIN_LEVEL });
     this.add.image(0, 0, WORLD_ASSET_KEYS.WORLD_MAP, 0).setOrigin(0);
+    // get collision tileset
     const collisionTiles = map.addTilesetImage('collision', WORLD_ASSET_KEYS.WORLD_COLLISION);
     if (!collisionTiles) {
       console.log(`[${WorldScene.name}:create] encountered error while creating collision tiles from tiled`);
@@ -84,14 +87,15 @@ export class WorldScene extends Phaser.Scene {
     }
     collisionLayer.setAlpha(TILED_COLLISION_LAYER_ALPHA).setDepth(2);
 
+    // get sign tileset
     this.#signLayer = map.getObjectLayer('Sign');
     if (!this.#signLayer) {
       console.log(`[${WorldScene.name}:create] encountered error while creating sign layer using data from tiled`);
       return;
     }
+    console.log('Sign layer objects:', this.#signLayer.objects);
 
-    console.log(this.#signLayer);
-
+    // get event tileset
     this.#eventLayer = map.getObjectLayer('Events');
     if (this.#eventLayer) {
       console.log(`[${WorldScene.name}:create] event layer found:`, this.#eventLayer);
@@ -153,7 +157,7 @@ export class WorldScene extends Phaser.Scene {
         this.#dialogUi.updateChoiceSelection(this.#currentChoice);
       }
 
-      if (this.#control.wasSpaceKeyPressed() || this.#control.wasEnterKeyPressed()) {
+      if (this.#control.getSpaceKeyPressed() || this.#control.getEnterKeyPressed()) {
         if (this.#currentNpcChoiceOptions.length === 0) return;
 
         const selectedChoice = this.#currentNpcChoiceOptions[this.#currentChoice];
@@ -200,16 +204,16 @@ export class WorldScene extends Phaser.Scene {
     }
 
     const selectedDirection = this.#control.getDirectionKeyPressedDown();
-    const wasSpaceKeyPressed = this.#control.wasSpaceKeyPressed();
+    const getSpaceKeyPressed = this.#control.getSpaceKeyPressed();
     if (selectedDirection !== DIRECTION.NONE && !this.#isPlayerInputLocked()) {
       this.#player.moveCharacter(selectedDirection);
     }
 
-    if (wasSpaceKeyPressed && !this.#player.isMoving) {
+    if (getSpaceKeyPressed && !this.#player.isMoving) {
       this.#handlePlayerInteraction();
     }
 
-    if (this.#control.wasEnterKeyPressed() && !this.#player.isMoving) {
+    if (this.#control.getEnterKeyPressed() && !this.#player.isMoving) {
       console.log('Enter key pressed - checking for interaction');
     }
 
@@ -524,16 +528,15 @@ export class WorldScene extends Phaser.Scene {
 
   #EventScene1() {
     console.log(`[${WorldScene.name}:EventScene1] Starting event 1 cutscene`);
-    
-    // Show emergence message after flash
     this.#showDialog = true;
     this.#dialogUi.showDialogModal([
       "Hello, I noticed you seem a bit frazzled. What happened ?"
     ]);
                   
     this.#control.lockPlayerInput = false;
-    console.log(`[${WorldScene.name}:EventScene1] Cutscene complete, player can now dismiss dialog`); 
-    
+    if (this.#control.lockPlayerInput === false) {
+      console.log(`[${WorldScene.name}:EventScene1] Player input locked.`);
+    }
     this.time.delayedCall(2000 , () => {
       this.#dialogUi.hideDialogModal();
       this.cameras.main.fadeOut(800, 0, 0, 0);
@@ -543,7 +546,6 @@ export class WorldScene extends Phaser.Scene {
         this.time.delayedCall(1000, () => {
           const X = 37 * TILE_SIZE;  // Around x: 576-624
           const Y = 35 * TILE_SIZE;  // Around y: 560-608
-        
           
           const newNPC = new NPC({
             scene: this,
@@ -588,7 +590,7 @@ export class WorldScene extends Phaser.Scene {
                   ]);
                   
                   this.#control.lockPlayerInput = false;
-                  console.log(`[${WorldScene.name}:EventScene1] Cutscene complete, player can now dismiss dialog`);
+                  console.log(`[${WorldScene.name}:EventScene1] Event 1 complete.`);
                 });
               }
             });

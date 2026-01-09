@@ -2,12 +2,13 @@ import Phaser from '../lib/phaser.js';
 import { DIRECTION } from '../common/direction.js';
 
 export class Control {
-   // declare variables
+    // variable declarations
     #scene;
     #cursorKeys;
     #enterKey;
     #lockPlayerInput = false;
 
+    // initialize variables
     constructor(scene) {
         this.#scene = scene;
         this.#cursorKeys = this.#scene.input.keyboard.createCursorKeys();
@@ -22,15 +23,14 @@ export class Control {
         this.#lockPlayerInput = value;
     }
 
-    wasEnterKeyPressed() {
+    // get status when press the key
+    getEnterKeyPressed() {
         return Phaser.Input.Keyboard.JustDown(this.#enterKey);
     }
-
-    wasSpaceKeyPressed() {
+    getSpaceKeyPressed() {
         return Phaser.Input.Keyboard.JustDown(this.#cursorKeys.space);
     }
-
-    wasBackKeyPressed() {
+    getBackKeyPressed() {
         return Phaser.Input.Keyboard.JustDown(this.#cursorKeys.shift);
     }
 
