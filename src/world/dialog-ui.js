@@ -1,9 +1,8 @@
 import Phaser from '../lib/phaser.js';
 import { UI_ASSET_KEYS } from '../assets/asset-keys.js';
-import { FONT_NAME } from '../assets/font-keys.js';
 
 const UI_TEXT_STYLE = Object.freeze({
-  fontFamily: FONT_NAME,
+  fontFamily: 'Kenney-Future-Narrow',
   color: 'black',
   fontSize: '32px',
   wordWrap: { width: 0 },
@@ -17,13 +16,13 @@ export class DialogUi {
   #container;
   #panel;
   #isVisible;
-  #userInputCursor;
+  #userInput;
   #userInputCursorTween;
   #uiText;
-  #textAnimationPlaying;
+  #playAnimation;
   #messagesToShow;
-  #currentTextAnimationEvent;
-  #currentMessageBeingAnimated;
+  #currentAnimation;
+  #currentAnimatedMessage;
   #choicesText;
   #choiceButtons;
   #showingChoices;
@@ -34,10 +33,10 @@ export class DialogUi {
     this.#padding = 90;
     this.#width = width ? Math.max(0, width - this.#padding * 2) : 0;
     this.#height = 124;
-    this.#textAnimationPlaying = false;
+    this.#playAnimation = false;
     this.#messagesToShow = [];
-    this.#currentTextAnimationEvent = undefined;
-    this.#currentMessageBeingAnimated = '';
+    this.#currentAnimation = undefined;
+    this.#currentAnimatedMessage = '';
     this.#choicesText = null;
     this.#choiceButtons = [];
     this.#showingChoices = false;
@@ -55,7 +54,7 @@ export class DialogUi {
     this.#uiText.setStyle({ wordWrap: { width: Math.max(16, this.#width - 18) } });
     this.#container.add(this.#uiText);
     this.#createPlayerInputCursor();
-    this.hideDialogModal();
+    this.hideDialog();
   }
 
   #resizeToCamera() {
@@ -65,9 +64,9 @@ export class DialogUi {
 
     this.#panel.setSize(this.#width, this.#height);
     this.#uiText.setStyle({ wordWrap: { width: Math.max(16, this.#width - 18) } });
-    if (this.#userInputCursor) {
+    if (this.#userInput) {
       const y = this.#height - 24;
-      this.#userInputCursor.setPosition(this.#width - 16, y);
+      this.#userInput.setPosition(this.#width - 16, y);
 
       if (this.#userInputCursorTween && this.#userInputCursorTween.isPlaying()) {
         this.#userInputCursorTween.restart();
@@ -80,7 +79,7 @@ export class DialogUi {
   }
 
   get isAnimationPlaying() {
-    return this.#textAnimationPlaying;
+    return this.#playAnimation;
   }
 
   get moreMessagesToShow() {
@@ -103,9 +102,9 @@ export class DialogUi {
     
     this.clearChoices();
 
-    if (this.#currentTextAnimationEvent) {
-      this.#currentTextAnimationEvent.remove();
-      this.#currentTextAnimationEvent = undefined;
+    if (this.#currentAnimation) {
+      this.#currentAnimation.remove();
+      this.#currentAnimation = undefined;
     }
 
     this.#messagesToShow = [...messages];
@@ -125,9 +124,9 @@ export class DialogUi {
   }
   
   showNextMessage() {
-      if (this.#currentTextAnimationEvent) {
-        this.#currentTextAnimationEvent.remove();
-        this.#currentTextAnimationEvent = undefined;
+      if (this.#currentAnimation) {
+        this.#currentAnimation.remove();
+        this.#currentAnimation = undefined;
       }
 
       if (this.#messagesToShow.length === 0) {
@@ -135,19 +134,19 @@ export class DialogUi {
       }
 
       this.#uiText.setText('').setAlpha(1);
-      this.#currentMessageBeingAnimated = this.#messagesToShow.shift() || '';
+      this.#currentAnimatedMessage = this.#messagesToShow.shift() || '';
       
-      this.#currentTextAnimationEvent = this.#animateText(this.#uiText, this.#currentMessageBeingAnimated, {
+      this.#currentAnimation = this.#animateText(this.#uiText, this.#currentAnimatedMessage, {
         delay: 50,
         callback: () => {
-          this.#textAnimationPlaying = false;
-          this.#currentTextAnimationEvent = undefined;
+          this.#playAnimation = false;
+          this.#currentAnimation = undefined;
         },
       });
-      this.#textAnimationPlaying = true;
+      this.#playAnimation = true;
   }
 
-  hideDialogModal() {
+  hideDialog() {
     this.#container.setAlpha(0);
     this.#userInputCursorTween.pause();
     this.#isVisible = false;
@@ -173,7 +172,7 @@ export class DialogUi {
       this.#height - 60,
       choicesText,
       {
-        fontFamily: FONT_NAME,
+        fontFamily: 'Kenney-Future-Narrow',
         fontSize: '24px',
         color: 'black',
         wordWrap: { width: this.#width - padding * 3 },
@@ -213,13 +212,13 @@ export class DialogUi {
   #createPlayerInputCursor() {
     const y = this.#height - 24;
     if (this.#scene.textures.exists(UI_ASSET_KEYS.CURSOR)) {
-      this.#userInputCursor = this.#scene.add.image(this.#width - 16, y, UI_ASSET_KEYS.CURSOR);
-      this.#userInputCursor.setAngle(90).setScale(4.5, 2);
+      this.#userInput = this.#scene.add.image(this.#width - 16, y, UI_ASSET_KEYS.CURSOR);
+      this.#userInput.setAngle(90).setScale(4.5, 2);
       console.debug('[DialogUi] using image cursor asset');
     } 
     
     else {
-      this.#userInputCursor = this.#scene.add.text(this.#width - 16, y, '▶', {
+      this.#userInput = this.#scene.add.text(this.#width - 16, y, '▶', {
         fontSize: '28px',
         color: 'black',
       }).setOrigin(0.5, 0.5);
@@ -235,18 +234,18 @@ export class DialogUi {
         start: y,
         to: y + 6,
       },
-      targets: this.#userInputCursor,
+      targets: this.#userInput,
     });
     this.#userInputCursorTween.pause();
-    this.#container.add(this.#userInputCursor);
+    this.#container.add(this.#userInput);
   }
 
-  skipTextAnimation() {
-    if (this.#textAnimationPlaying && this.#currentTextAnimationEvent) {
-      this.#currentTextAnimationEvent.remove();
-      this.#uiText.setText(this.#currentMessageBeingAnimated);
-      this.#textAnimationPlaying = false;
-      this.#currentTextAnimationEvent = undefined;
+  skipAnimation() {
+    if (this.#playAnimation && this.#currentAnimation) {
+      this.#currentAnimation.remove();
+      this.#uiText.setText(this.#currentAnimatedMessage);
+      this.#playAnimation = false;
+      this.#currentAnimation = undefined;
     }
   }
 

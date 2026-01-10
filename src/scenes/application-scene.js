@@ -15,11 +15,36 @@ export class ApplicationScene extends Phaser.Scene {
 
     constructor() {
         super({ key: SCENE_KEYS. APPLICATION_SCENE });
+        this._currentInput = null;
+        this.keyboardListener = null;
     }
 
     create() {
         this.cameras.main.setBackgroundColor(0xFFFFFF);
         this.#control = new Control(this);
+
+        if (!this.keyboardListener) {
+            this.keyboardListener = this.input.keyboard.on('keydown', (event) => {
+                if (!this._currentInput) return;
+                const { inputField, inputText, InputKey } = this._currentInput;
+                const key = event.key;
+
+                if (this.#control.getEnterKeyPressed()) {
+                    inputField.setStrokeStyle(2, 0x9ca3af);
+                    this._currentInput = null;
+                    return;
+                }
+
+                if (this.#control.getBackspaceKeyPressed()) {
+                    this.#formData[InputKey] = this.#formData[InputKey].slice(0, -1);
+                } 
+                else if (key.length === 1) {
+                    this.#formData[InputKey] += key;
+                }
+
+                inputText.setText(this.#formData[InputKey]);
+            });
+        }
 
         // add the header panel
         const panel = this.add.container(512, 50);
@@ -88,41 +113,22 @@ export class ApplicationScene extends Phaser.Scene {
         const inputText = this.add.text(x - 190, y + 30, exampleText, {
             fontSize: '16px', color: '#6b7280'}).setOrigin(0, 0.5);
 
-        // check whether click input field
+        // activate one input at a time
         let isClick = true;
         inputField.on('pointerdown', () => {
+            if (this._currentInput && this._currentInput.inputField !== inputField) {
+                this._currentInput.inputField.setStrokeStyle(2, 0x9ca3af);
+            }
+
             if (isClick) {
                 this.#formData[InputKey] = '';
                 inputText.setText('');
                 inputText.setColor('#000000');
                 isClick = false;
             }
-            
-            this.current = { inputText, InputKey };
+
+            this._currentInput = { inputField, inputText, InputKey };
             inputField.setStrokeStyle(2, 0x3b82f6);
-
-            if (this.keyboardListener) return;
-            this.keyboardListener = this.input.keyboard.on('keydown', (event) => {
-                const key = event.key;
-
-                if (this.#control.getEnterKeyPressed()) {
-                    this.current = null;
-                    inputField.setStrokeStyle(2, 0x9ca3af);
-                    this.input.keyboard.off('keydown', this.keyboardListener);
-                    this.keyboardListener = null;
-                    return;
-                }
-
-                if (this.#control.getBackspaceKeyPressed()) {
-                    this.#formData[InputKey] = this.#formData[InputKey].slice(0, -1);
-                } 
-                
-                else if (key.length === 1) {
-                    this.#formData[InputKey] += key;
-                }
-
-                inputText.setText(this.#formData[InputKey]);
-            });
         });
     }
 

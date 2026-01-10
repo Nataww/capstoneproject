@@ -1,6 +1,6 @@
 import Phaser from '../lib/phaser.js';
 import { DIRECTION } from '../common/direction.js';
-import { getTargetPosition } from '../utils/grid.js';
+import { getPosition } from '../utils/grid.js';
 import { TILE_SIZE } from '../config.js';
 
 export class Character {
@@ -11,10 +11,10 @@ export class Character {
     _targetPosition;
     _previoustargetPosition;
     _idleFrameConfig;
-    _spriteGridMovementFinishedCallback;
+    _playerMovement;
     _origin;
     _collisionLayer;
-    _otherCharactersToCheckForCollision;
+    _checkCollision;
 
     constructor(config) {
         if(this.constructor === Character) {
@@ -30,12 +30,12 @@ export class Character {
         this._idleFrameConfig = config.idleFrameConfig;
         this._origin = config.origin ? { ...config.origin } : { x: 0, y: 0 };
         this._collisionLayer = config.collisionLayer;
-        this._otherCharactersToCheckForCollision = config.otherCharactersToCheckForCollision || [];
+        this._checkCollision = config.checkCollision || [];
 
         this._phaserGameObject = this._scene.add
         .sprite(config.position.x, config.position.y, config.assetKey, this._getIdleFrame())
         .setOrigin(this._origin.x, this._origin.y);
-        this._spriteGridMovementFinishedCallback = config.spriteGridMovementFinishedCallback;
+        this._playerMovement = config.playerMovement;
     }
 
     get sprite() {
@@ -57,8 +57,8 @@ export class Character {
         this._moveSprite(direction);
     }
 
-    addCharacterCollision(character) {
-        this._otherCharactersToCheckForCollision.push(character);
+    addCollision(character) {
+        this._checkCollision.push(character);
     }
 
     update(time) {
@@ -96,7 +96,7 @@ export class Character {
             return;
         }
         this._isMoving = true;
-        this.#handleSpriteMovement();
+        this.#updateSpritesheetMovement();
     }
 
     isBlockingTile() {
@@ -104,16 +104,16 @@ export class Character {
             return false;
         }
         const targetPosition = {...this._targetPosition};
-        const updatePosition = getTargetPosition(targetPosition, this._direction);
-        return this.#doesPositionCollideWithCollisionLayer(updatePosition) || this.#doesPositionCollideWithOtherCharacters(updatePosition);
+        const updatePosition = getPosition(targetPosition, this._direction);
+        return this.#checkCollisionLayer(updatePosition) || this.#checkPlayerCollision(updatePosition);
     }
     
-    #handleSpriteMovement() {
+    #updateSpritesheetMovement() {
         if (this._direction === DIRECTION.NONE) {
             return;
         }
         
-        const updatePosition = getTargetPosition(this._phaserGameObject, this._direction);
+        const updatePosition = getPosition(this._phaserGameObject, this._direction);
         this._previoustargetPosition = { ...this._targetPosition };
         this._targetPosition.x = updatePosition.x;
         this._targetPosition.y = updatePosition.y;
@@ -135,30 +135,30 @@ export class Character {
             onComplete: () => {
                 this._isMoving = false;
                 this._previoustargetPosition = { ...this._targetPosition };
-                if (this._spriteGridMovementFinishedCallback) {
-                    this._spriteGridMovementFinishedCallback();
+                if (this._playerMovement) {
+                    this._playerMovement();
                 }
             }
         });
 
     }
 
-    #doesPositionCollideWithCollisionLayer(position) {
+    #checkCollisionLayer(position) {
         if (!this._collisionLayer) {
             return false;
         }
         const { x, y } = position;
         const tile = this._collisionLayer.getTileAtWorldXY(x, y, true);
-        return tile.index !== -1; // Ensure the method returns a boolean
+        return tile.index !== -1;
     }
 
-    #doesPositionCollideWithOtherCharacters(position) {
+    #checkPlayerCollision(position) {
         const { x, y } = position;
-        if (this._otherCharactersToCheckForCollision.length === 0) {    
+        if (this._checkCollision.length === 0) {    
         return false;
         }
 
-        const collidesWithACharacter = this._otherCharactersToCheckForCollision.some((character) => {
+        const collideCharacter = this._checkCollision.some((character) => {
             const charX = Math.round(character._targetPosition.x / TILE_SIZE) * TILE_SIZE;
             const charY = Math.round(character._targetPosition.y / TILE_SIZE) * TILE_SIZE;
             
@@ -167,6 +167,6 @@ export class Character {
 
             return (charX === targetX && charY === targetY);
         });
-        return collidesWithACharacter;
+        return collideCharacter;
     }
 }

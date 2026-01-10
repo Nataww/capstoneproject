@@ -26,7 +26,7 @@ export class ConversationScene extends Phaser.Scene {
     console.log(`[${ConversationScene.name}:create] invoked`);
 
     this.add.image(0, 0, CONVERSATION_ASSET_KEYS.BACKGROUND).setOrigin(0);
-    this.add.image(512, 420, UI_ASSET_KEYS.DIALOG_PANEL).setScale(1.9, 1.9);
+    this.add.image(512, 420, UI_ASSET_KEYS.DIALOG_PANEL).setScale(1.9, 1.9).setDepth(1);
 
     this.#player1= this.add.image(768, 230, PLAYER_ASSET_KEYS.PLAYER2, 0).setScale(0.5);
     this.#mentor = this.add.image(256, 230, PLAYER_ASSET_KEYS.PLAYER1, 0).setScale(0.5);
@@ -88,10 +88,10 @@ export class ConversationScene extends Phaser.Scene {
   #getDialogue(dialogue) {
     const speakerText = this.add.text(140, 340, dialogue.speaker, {
       fontSize: '32px', color: '#7E3D3F', fontStyle: 'bold'
-    });
+    }).setDepth(2);
     const dialogueText = this.add.text(140, 390, dialogue.text, {
       fontSize: '28px', color: '#000000', wordWrap: { width: 750 }
-    });
+    }).setDepth(2);
     this.text.push(speakerText, dialogueText);
   }
   

@@ -1,7 +1,7 @@
 import { DIRECTION } from '../common/direction.js';
 import { TILE_SIZE } from '../config.js';
 
-export function getTargetPosition(current, direction) {
+export function getPosition(current, direction) {
   const target = { ...current };
 
   switch (direction) {

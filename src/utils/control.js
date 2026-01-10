@@ -6,6 +6,7 @@ export class Control {
     #scene;
     #cursorKeys;
     #enterKey;
+    #backspaceKey;
     #lockPlayerInput = false;
 
     // initialize variables
@@ -13,6 +14,7 @@ export class Control {
         this.#scene = scene;
         this.#cursorKeys = this.#scene.input.keyboard.createCursorKeys();
         this.#enterKey = this.#scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER);
+        this.#backspaceKey = this.#scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.BACKSPACE);
     }
 
     get isInputLocked() {
@@ -30,11 +32,15 @@ export class Control {
     getSpaceKeyPressed() {
         return Phaser.Input.Keyboard.JustDown(this.#cursorKeys.space);
     }
+    getBackspaceKeyPressed() {
+        return Phaser.Input.Keyboard.JustDown(this.#backspaceKey);
+    }
     getBackKeyPressed() {
         return Phaser.Input.Keyboard.JustDown(this.#cursorKeys.shift);
     }
 
-    getDirectionKeyJustPressed() {
+    // get status when just down the key
+    getJustDownKey() {
         if (!this.#cursorKeys) return DIRECTION.NONE;
 
         if (Phaser.Input.Keyboard.JustDown(this.#cursorKeys.left)) {
@@ -53,8 +59,8 @@ export class Control {
         return DIRECTION.NONE;
     }
 
-    
-    getDirectionKeyPressedDown() {
+    // get status when hold down the key
+    getHoldDownKey() {
         if (!this.#cursorKeys) return DIRECTION.NONE;
 
         if (this.#cursorKeys.left.isDown) {

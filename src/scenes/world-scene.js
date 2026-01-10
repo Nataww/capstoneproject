@@ -3,9 +3,9 @@ import { SCENE_KEYS } from './scene-keys.js';
 import { Player } from '../world/player.js';
 import { Control } from '../utils/control.js';
 import { DIRECTION } from '../common/direction.js';
-import { TILED_COLLISION_LAYER_ALPHA, TILE_SIZE } from '../config.js';
+import { TILE_SIZE } from '../config.js';
 import { DATA_MANAGER_STORE_KEYS, dataManager } from '../utils/data-manager.js';
-import { getTargetPosition } from '../utils/grid.js';
+import { getPosition } from '../utils/grid.js';
 import { DialogUi } from '../world/dialog-ui.js';
 import { NPC } from '../world/npc.js';
 import { DataUtils } from '../utils/data.js';
@@ -25,21 +25,24 @@ const TILED_NPC_PROPERTY = Object.freeze({
 
 export class WorldScene extends Phaser.Scene {
   #player;
+  #npcs;
   #control;
+
   #encounterLayer;
   #signEncountered;
   #signLayer;
   #eventLayer;
   #triggeredEvents;
-  #dialogUi;
-  #npcs;
-  #npcPlayerIsInteractingWith;
-  #isInteractingWithSign;
-  #waitInput;
-  #lastNpcEventHandledIndex;
-  #isProcessingNpcEvent;
+
+  #currentNPC;
+  #currentSign;
+  #currentNPCEvent;
   #currentChoice;
-  #currentNpcChoiceOptions;
+  #waitInput;
+  #lastNPCIndex;
+  #currentNpcOptions;
+
+  #dialogUi;
   #showDialog;
 
   constructor() {
@@ -50,13 +53,13 @@ export class WorldScene extends Phaser.Scene {
 
   init() {
     console.log(`[${WorldScene.name}:init] invoked`);
-    this.#npcPlayerIsInteractingWith = undefined;
-    this.#isInteractingWithSign = false;
-    this.#lastNpcEventHandledIndex = -1;
-    this.#isProcessingNpcEvent = false;
-    this.#waitInput = false;
+    this.#currentNPC = undefined;
+    this.#currentSign = false;
     this.#currentChoice = 0;
-    this.#currentNpcChoiceOptions = [];
+    this.#currentNpcOptions = [];
+    this.#currentNPCEvent = false;
+    this.#waitInput = false;
+    this.#lastNPCIndex = -1;
     this.#triggeredEvents = new Set();
     this.#showDialog = false;
   }
@@ -74,23 +77,24 @@ export class WorldScene extends Phaser.Scene {
     // create map and collision layer
     const map = this.make.tilemap({ key: WORLD_ASSET_KEYS.WORLD_MAIN_LEVEL });
     this.add.image(0, 0, WORLD_ASSET_KEYS.WORLD_MAP, 0).setOrigin(0);
+
     // get collision tileset
     const collisionTiles = map.addTilesetImage('collision', WORLD_ASSET_KEYS.WORLD_COLLISION);
     if (!collisionTiles) {
-      console.log(`[${WorldScene.name}:create] encountered error while creating collision tiles from tiled`);
+      console.log(`[${WorldScene.name}:create] encountered error while creating collision tiles`);
       return;
     }
     const collisionLayer = map.createLayer('Collision', collisionTiles, 0, 0);
     if (!collisionLayer) {
-      console.log(`[${WorldScene.name}:create] encountered error while creating collision layer using data from tiled`);
+      console.log(`[${WorldScene.name}:create] encountered error while creating collision layer`);
       return;
     }
-    collisionLayer.setAlpha(TILED_COLLISION_LAYER_ALPHA).setDepth(2);
+    collisionLayer.setAlpha(0).setDepth(2);
 
     // get sign tileset
     this.#signLayer = map.getObjectLayer('Sign');
     if (!this.#signLayer) {
-      console.log(`[${WorldScene.name}:create] encountered error while creating sign layer using data from tiled`);
+      console.log(`[${WorldScene.name}:create] encountered error while creating sign layer`);
       return;
     }
     console.log('Sign layer objects:', this.#signLayer.objects);
@@ -98,7 +102,7 @@ export class WorldScene extends Phaser.Scene {
     // get event tileset
     this.#eventLayer = map.getObjectLayer('Events');
     if (this.#eventLayer) {
-      console.log(`[${WorldScene.name}:create] event layer found:`, this.#eventLayer);
+      console.log(`[${WorldScene.name}:create] encountered error while creating event layer`);
     }
 
     this.#createNPCs(map);
@@ -108,15 +112,15 @@ export class WorldScene extends Phaser.Scene {
       position: dataManager.store.get(DATA_MANAGER_STORE_KEYS.PLAYER_POSITION),
       direction: dataManager.store.get(DATA_MANAGER_STORE_KEYS.PLAYER_DIRECTION),
       collisionLayer: collisionLayer,
-      spriteGridMovementFinishedCallback: () => {
-        this.#handlePlayerMovementUpdate();
+      playerMovement: () => {
+        this.#updatePlayerMovement();
       },
-      otherCharactersToCheckForCollision: this.#npcs,
+      checkCollision: this.#npcs,
     });
     this.cameras.main.startFollow(this.#player.sprite);
 
     this.#npcs.forEach((npc) => {
-      npc.addCharacterCollision(this.#player);
+      npc.addCollision(this.#player);
     });
 
     // add background music
@@ -129,7 +133,7 @@ export class WorldScene extends Phaser.Scene {
       } 
     });
 
-    this.#control  = new Control(this);
+    this.#control = new Control(this);
     this.#dialogUi = new DialogUi(this, 1200);
 
     this.cameras.main.fadeIn(1000, 0, 0, 0);
@@ -141,11 +145,10 @@ export class WorldScene extends Phaser.Scene {
       this.#player.update(time);
       return;
     }
-
     
     if (this.#waitInput) {
     
-      const direction = this.#control.getDirectionKeyJustPressed();
+      const direction = this.#control.getJustDownKey();
       
       if (direction === DIRECTION.UP) {
         this.#currentChoice = Math.max(0, this.#currentChoice - 1);
@@ -153,23 +156,23 @@ export class WorldScene extends Phaser.Scene {
       }
       
       else if (direction === DIRECTION.DOWN) {
-        this.#currentChoice = Math.min(this.#currentNpcChoiceOptions.length - 1, this.#currentChoice + 1);
+        this.#currentChoice = Math.min(this.#currentNpcOptions.length - 1, this.#currentChoice + 1);
         this.#dialogUi.updateChoiceSelection(this.#currentChoice);
       }
-
+      // get player input for redirect choice
       if (this.#control.getSpaceKeyPressed() || this.#control.getEnterKeyPressed()) {
-        if (this.#currentNpcChoiceOptions.length === 0) return;
+        if (this.#currentNpcOptions.length === 0) return;
 
-        const selectedChoice = this.#currentNpcChoiceOptions[this.#currentChoice];
+        const selectedChoice = this.#currentNpcOptions[this.#currentChoice];
         console.log(`Player chose: "${selectedChoice.text}"`);
         
         this.#waitInput = false;
         this.#dialogUi.clearChoices();
-        this.#dialogUi.hideDialogModal();
+        this.#dialogUi.hideDialog();
 
-        if (selectedChoice.nextEventIndex === 0) {
-          if (this.#isInteractingWithSign) {
-            this.#isInteractingWithSign = false;
+        if (selectedChoice.nextIndex === 0) {
+          if (this.#currentSign) {
+            this.#currentSign = false;
             this.cameras.main.fadeOut(1000);
             this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
               this.scene.start(SCENE_KEYS.APPLICATION_SCENE);
@@ -183,38 +186,32 @@ export class WorldScene extends Phaser.Scene {
           return;
         }
         
-        else if (selectedChoice.nextEventIndex === 1) {
-          if (this.#isInteractingWithSign) {
-            this.#isInteractingWithSign = false;
+        else if (selectedChoice.nextIndex === 1) {
+          if (this.#currentSign) {
+            this.#currentSign = false;
           }
-          if (this.#npcPlayerIsInteractingWith) {
-            this.#npcPlayerIsInteractingWith.isTalkingToPlayer = false;
-            this.#npcPlayerIsInteractingWith = undefined;
+          if (this.#currentNPC) {
+            this.#currentNPC.isTalkingToPlayer = false;
+            this.#currentNPC = undefined;
           }
           return;
         }
         
-        if (selectedChoice.nextEventIndex !== undefined) {
-          this.#lastNpcEventHandledIndex = selectedChoice.nextEventIndex - 1;
+        if (selectedChoice.nextIndex !== undefined) {
+          this.#lastNPCIndex = selectedChoice.nextIndex - 1;
         }
-        this.#handleNpcInteraction();
+        this.#updateNpcInteraction();
         return;
       }
       return; 
     }
 
-    const selectedDirection = this.#control.getDirectionKeyPressedDown();
-    const getSpaceKeyPressed = this.#control.getSpaceKeyPressed();
-    if (selectedDirection !== DIRECTION.NONE && !this.#isPlayerInputLocked()) {
-      this.#player.moveCharacter(selectedDirection);
+    if (this.#control.getHoldDownKey() !== DIRECTION.NONE && !this.#isPlayerInputLocked()) {
+      this.#player.moveCharacter(this.#control.getHoldDownKey());
     }
 
-    if (getSpaceKeyPressed && !this.#player.isMoving) {
-      this.#handlePlayerInteraction();
-    }
-
-    if (this.#control.getEnterKeyPressed() && !this.#player.isMoving) {
-      console.log('Enter key pressed - checking for interaction');
+    if ((this.#control.getSpaceKeyPressed() || this.#control.getEnterKeyPressed()) && !this.#player.isMoving) {
+      this.#updatePlayerInteraction();
     }
 
     this.#player.update(time);
@@ -223,34 +220,36 @@ export class WorldScene extends Phaser.Scene {
     });
   }
 
-  #handlePlayerInteraction() {
+  #updatePlayerInteraction() {
     if (this.#dialogUi.isAnimationPlaying) {
-      this.#dialogUi.skipTextAnimation();
+      this.#dialogUi.skipAnimation();
       return;
     }
 
     if (this.#dialogUi.isVisible && !this.#dialogUi.moreMessagesToShow) {
-      if (this.#npcPlayerIsInteractingWith) {
+      if (this.#currentNPC) {
 
-        const currentEvent = this.#npcPlayerIsInteractingWith.events[this.#lastNpcEventHandledIndex];
+        const currentEvent = this.#currentNPC.events[this.#lastNPCIndex];
         if (currentEvent.type === 'MESSAGE' && currentEvent.data.isEnd) {
-            this.#dialogUi.hideDialogModal();
-            this.#npcPlayerIsInteractingWith.isTalkingToPlayer = false;
-            this.#npcPlayerIsInteractingWith = undefined;
-            this.#lastNpcEventHandledIndex = -1;
+            this.#dialogUi.hideDialog();
+            this.#currentNPC.isTalkingToPlayer = false;
+            this.#currentNPC = undefined;
+            this.#lastNPCIndex = -1;
             return;
         }
 
-        this.#handleNpcInteraction();
+        this.#updateNpcInteraction();
       }
+
       if (this.#showDialog) {
-        this.#dialogUi.hideDialogModal();
+        this.#dialogUi.hideDialog();
         this.#showDialog = false;
         return;
       }
-      if (this.#isInteractingWithSign) {
-        this.#isInteractingWithSign = false;
-        this.#dialogUi.hideDialogModal();
+
+      if (this.#currentSign) {
+        this.#currentSign = false;
+        this.#dialogUi.hideDialog();
       }
       return;
     }
@@ -260,85 +259,27 @@ export class WorldScene extends Phaser.Scene {
       return;
     }
 
-    console.log('start of interaction check');
     const { x, y } = this.#player.sprite;
-    const targetPosition = getTargetPosition({ x, y }, this.#player.direction);
-
-    
-    console.log('Player position:', { x, y });
-    console.log('Target position:', targetPosition);
-    console.log('Sign objects:', this.#signLayer.objects);
-
-    // check for sign, and display appropriate message if player is not facing up
-    const nearbySign = this.#signLayer.objects.find((object) => {
-      if (!object.x || !object.y) {
-        console.log('object missing x or y value');
-        return false;
+    const targetPosition = getPosition({ x, y }, this.#player.direction);
+    const sign = this.#getSign(targetPosition);
+    if (sign) {
+      if (this.#redirectApplication(sign)) {
+        this.#getRedirectChoice();
       }
-
-      // get object positions (x, y)
-      const objectTileX = Math.round(object.x / TILE_SIZE) * TILE_SIZE;
-      const objectTileY = Math.round(object.y / TILE_SIZE) * TILE_SIZE;
-      
-      console.log('Checking object at:', { x: objectTileX, y: objectTileY }, 'against target:', targetPosition);
-      return objectTileX === targetPosition.x && objectTileY - TILE_SIZE === targetPosition.y;
-    });
-
-    console.log('Nearby sign found:', nearbySign);
-
-    if (nearbySign) {
-      const props = nearbySign.properties || [];
-      console.log('Sign properties:', props);
-
-      const shouldRedirect = props.find((prop) => prop.name === SIGN_PROPERTY.REDIRECT_TO_APPLICATION)?.value === true;
-      console.log('Should show redirect choice:', shouldRedirect);
-
-      if (shouldRedirect) {
-        this.#isInteractingWithSign = true;
-        this.#waitInput = true;
-        this.#currentChoice = 0;
-        this.#currentNpcChoiceOptions = [
-          { text: 'Yes', nextEventIndex: 0 },
-          { text: 'No', nextEventIndex: 1 },
-        ];
-        this.#dialogUi.showDialogModal(['Would you like to play the mini-game?']);
-        this.time.delayedCall(800, () => {
-          this.#dialogUi.showChoices(this.#currentNpcChoiceOptions, this.#currentChoice);
-        });
-      }
-      
       return;
     }
 
-    let nearbyNpc = this.#npcs.find((npc) => {
-      const npcTileX = Math.round(npc.sprite.x / TILE_SIZE) * TILE_SIZE;
-      const npcTileY = Math.round(npc.sprite.y / TILE_SIZE) * TILE_SIZE;
-      return npcTileX === targetPosition.x && npcTileY === targetPosition.y;
-    });
-    
-    if (!nearbyNpc) {
-      const targetPosition2 = getTargetPosition(targetPosition, this.#player.direction);
-      
-      nearbyNpc = this.#npcs.find((npc) => {
-        const npcTileX = Math.round(npc.sprite.x / TILE_SIZE) * TILE_SIZE;
-        const npcTileY = Math.round(npc.sprite.y / TILE_SIZE) * TILE_SIZE;
-        return npcTileX === targetPosition2.x && npcTileY === targetPosition2.y;
-      });
-    }
-
-    if (nearbyNpc) {
-      console.log('Nearby NPC found:', nearbyNpc);
-      nearbyNpc.facePlayer(this.#player.direction);
-      nearbyNpc.isTalkingToPlayer = true;
-      this.#npcPlayerIsInteractingWith = nearbyNpc;
-      this.#handleNpcInteraction();
+    const npcNearPlayer = this.#getNearNPCPositions(targetPosition);
+    if (npcNearPlayer) {
+      npcNearPlayer.facePlayer(this.#player.direction);
+      npcNearPlayer.isTalkingToPlayer = true;
+      this.#currentNPC = npcNearPlayer;
+      this.#updateNpcInteraction();
       return;
     }
-
-    console.log('No NPC found at target position');
   }
-
-  #handlePlayerMovementUpdate() {
+  // update player movement and provide event check
+  #updatePlayerMovement() {
     dataManager.store.set(DATA_MANAGER_STORE_KEYS.PLAYER_POSITION, {
       x: this.#player.sprite.x,
       y: this.#player.sprite.y,
@@ -346,19 +287,15 @@ export class WorldScene extends Phaser.Scene {
     
     dataManager.store.set(DATA_MANAGER_STORE_KEYS.PLAYER_DIRECTION, this.#player.direction);
 
-    this.#checkEventZones();
+    this.#checkEvent();
 
-    if (!this.#encounterLayer) {
-      return;
-    }
+    if (!this.#encounterLayer) return;
 
-    const isInEncounterZone =
+    const encounterZone =
       this.#encounterLayer.getTileAtWorldXY(this.#player.sprite.x, this.#player.sprite.y, true).index !== -1;
-    if (!isInEncounterZone) {
-      return;
-    }
+    if (!encounterZone) return;
 
-    console.log(`[${WorldScene.name}:handlePlayerMovementUpdate] player is in an encounter zone`);
+    console.log(`[${WorldScene.name}:updatePlayerMovement] Player entered encounter zone`);
     this.#signEncountered = Math.random() < 0.2;
     if (this.#signEncountered) {
       this.cameras.main.fadeOut(2000);
@@ -368,16 +305,14 @@ export class WorldScene extends Phaser.Scene {
     }
   }
 
-
+  // lock player input
   #isPlayerInputLocked() {
     return (
-      this.#dialogUi.isVisible ||
-      this.#control.isInputLocked ||
-      this.#isProcessingNpcEvent ||
-      this.#waitInput
+      this.#dialogUi.isVisible || this.#control.isInputLocked || this.#currentNPCEvent || this.#waitInput
     );
   }
 
+  // create NPC with tilemap
   #createNPCs(map) {
     this.#npcs = [];
     const npcLayers = map.getObjectLayerNames().filter((layerName) => layerName.includes('NPC'));
@@ -412,29 +347,29 @@ export class WorldScene extends Phaser.Scene {
         events: npcData.events,
       });
 
-      npc.addCharacterCollision(this.#player);
+      npc.addCollision(this.#player);
       this.#npcs.push(npc);
     });
   }
 
-  #handleNpcInteraction() {
-    if (this.#isProcessingNpcEvent || !this.#npcPlayerIsInteractingWith) {
+  #updateNpcInteraction() {
+    if (this.#currentNPCEvent || !this.#currentNPC) {
       return;
     }
-    const eventsToProcess = this.#npcPlayerIsInteractingWith.events;
-    const isMoveEventsToProcess = eventsToProcess.length - 1 !== this.#lastNpcEventHandledIndex;
+    const eventsToProcess = this.#currentNPC.events;
+    const isMoveEventsToProcess = eventsToProcess.length - 1 !== this.#lastNPCIndex;
 
     if (!isMoveEventsToProcess) {
-      this.#npcPlayerIsInteractingWith = undefined; 
-      this.#lastNpcEventHandledIndex = -1; 
+      this.#currentNPC = undefined; 
+      this.#lastNPCIndex = -1; 
 
-      this.#dialogUi.hideDialogModal();
+      this.#dialogUi.hideDialog();
 
       return;
     }
 
-    this.#lastNpcEventHandledIndex += 1;
-    const eventToHandle = this.#npcPlayerIsInteractingWith.events[this.#lastNpcEventHandledIndex];
+    this.#lastNPCIndex += 1;
+    const eventToHandle = this.#currentNPC.events[this.#lastNPCIndex];
     const eventType = eventToHandle.type;
 
     switch (eventType) {
@@ -445,17 +380,17 @@ export class WorldScene extends Phaser.Scene {
       case 'CHOICE': {
         this.#dialogUi.showDialogModal([eventToHandle.data.prompt || '']);
         this.#waitInput = true;
-        this.#currentNpcChoiceOptions = eventToHandle.data.choices || [];
+        this.#currentNpcOptions = eventToHandle.data.choices || [];
         this.#currentChoice = 0;
         this.time.delayedCall(800, () => {
           if (this.#waitInput) {
-            this.#dialogUi.showChoices(this.#currentNpcChoiceOptions, this.#currentChoice);
+            this.#dialogUi.showChoices(this.#currentNpcOptions, this.#currentChoice);
           }
         });
         break;
       }
       case 'SCENE_FADE_IN_AND_OUT':
-        this.#isProcessingNpcEvent = true;
+        this.#currentNPCEvent = true;
         this.cameras.main.fadeOut(eventToHandle.data.fadeOutDuration, 0, 0, 0, (fadeOutCamera, fadeOutProgress) => {
           if (fadeOutProgress !== 1) {
             return;
@@ -465,8 +400,8 @@ export class WorldScene extends Phaser.Scene {
               if (fadeInProgress !== 1) {
                 return;
               }
-              this.#isProcessingNpcEvent = false;
-              this.#handleNpcInteraction();
+              this.#currentNPCEvent = false;
+              this.#updateNpcInteraction();
             });
           });
         });
@@ -478,7 +413,8 @@ export class WorldScene extends Phaser.Scene {
     }
   }
 
-  #checkEventZones() {
+  // check event 
+  #checkEvent() {
     if (!this.#eventLayer || this.#isPlayerInputLocked()) {
       return;
     }
@@ -508,11 +444,12 @@ export class WorldScene extends Phaser.Scene {
       return;
     }
 
-    console.log(`[${WorldScene.name}:checkEventZones] Triggered event ${eventId}`);
+    console.log(`[${WorldScene.name}:checkEvent] Triggered event ${eventId}`);
     this.#triggeredEvents.add(eventId);
     this.#triggerEventCutscene(eventId);
   }
 
+  // change based on input of event id
   #triggerEventCutscene(eventId) {
     switch (eventId) {
       case 1:
@@ -526,6 +463,58 @@ export class WorldScene extends Phaser.Scene {
     }
   }
 
+  // get sign object
+  #getSign(targetPosition) {
+    if (!this.#signLayer || !Array.isArray(this.#signLayer.objects)) return null;
+    return this.#signLayer.objects.find((object) => {
+      if (!object.x || !object.y) return false;
+      const objectTileX = Math.round(object.x / TILE_SIZE) * TILE_SIZE;
+      const objectTileY = Math.round(object.y / TILE_SIZE) * TILE_SIZE;
+      return objectTileX === targetPosition.x && objectTileY - TILE_SIZE === targetPosition.y;
+    }) || null;
+  }
+
+  // redirect to application
+  #redirectApplication(signObject) {
+    const props = signObject?.properties || [];
+    return props.find((prop) => prop.name === SIGN_PROPERTY.REDIRECT_TO_APPLICATION)?.value === true;
+  }
+
+  // show redirect choice
+  #getRedirectChoice() {
+    this.#currentSign = true;
+    this.#waitInput = true;
+    this.#currentChoice = 0;
+    this.#currentNpcOptions = [
+      { text: 'Yes', nextIndex: 0 },
+      { text: 'No', nextIndex: 1 },
+    ];
+    this.#dialogUi.showDialogModal(['Would you like to play the mini-game?']);
+    this.time.delayedCall(800, () => {
+      this.#dialogUi.showChoices(this.#currentNpcOptions, this.#currentChoice);
+    });
+  }
+
+  // find near npc near target position
+  #getNearNPCPositions(targetPosition) {
+    let npcNearPlayer = this.#npcs.find((npc) => {
+      const npcX = Math.round(npc.sprite.x / TILE_SIZE) * TILE_SIZE;
+      const npcY = Math.round(npc.sprite.y / TILE_SIZE) * TILE_SIZE;
+      return npcX === targetPosition.x && npcY === targetPosition.y;
+    });
+
+    if (!npcNearPlayer) {
+      const currentPosition = getPosition(targetPosition, this.#player.direction);
+      npcNearPlayer = this.#npcs.find((npc) => {
+        const npcX = Math.round(npc.sprite.x / TILE_SIZE) * TILE_SIZE;
+        const npcY = Math.round(npc.sprite.y / TILE_SIZE) * TILE_SIZE;
+        return npcX === currentPosition.x && npcY === currentPosition.y;
+      });
+    }
+    return npcNearPlayer || null;
+  }
+
+  // event 1 for introduction
   #EventScene1() {
     console.log(`[${WorldScene.name}:EventScene1] Starting event 1 cutscene`);
     this.#showDialog = true;
@@ -535,10 +524,11 @@ export class WorldScene extends Phaser.Scene {
                   
     this.#control.lockPlayerInput = false;
     if (this.#control.lockPlayerInput === false) {
-      console.log(`[${WorldScene.name}:EventScene1] Player input locked.`);
+      console.log(`[${WorldScene.name}:EventScene1] locked player input`);
     }
+
     this.time.delayedCall(2000 , () => {
-      this.#dialogUi.hideDialogModal();
+      this.#dialogUi.hideDialog();
       this.cameras.main.fadeOut(800, 0, 0, 0);
       
       this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
@@ -557,18 +547,13 @@ export class WorldScene extends Phaser.Scene {
             events: [],
           });
           
-          newNPC.addCharacterCollision(this.#player);
-          this.#player.addCharacterCollision(newNPC);
+          newNPC.addCollision(this.#player);
+          this.#player.addCollision(newNPC);
           
-          // Start hidden and transparent
-          newNPC.sprite.setVisible(false);
-          newNPC.sprite.setAlpha(0);
-          newNPC.sprite.setScale(0.8);
+          newNPC.sprite.setVisible(false).setAlpha(0).setScale(0.8);
           this.#npcs.push(newNPC);
           
           console.log(`[${WorldScene.name}:EventScene1] New NPC created at (${X}, ${Y})`);
-          
-          // Fade camera back in
           this.cameras.main.fadeIn(1200, 0, 0, 0);
           this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_IN_COMPLETE, () => {
             newNPC.sprite.setVisible(true);
@@ -600,26 +585,27 @@ export class WorldScene extends Phaser.Scene {
     });
   }
 
+  // event 2 for ending
   #EventScene2() {
     console.log(`[${WorldScene.name}:EventScene2] Starting event 2 cutscene`);
     this.#control.lockPlayerInput = true;
     this.#showDialog = true;
 
-    // End Scene dialog
+    // display dialog messages
     this.#dialogUi.showDialogModal([
       'Congratulations!',
       'You have completed this area.',
       'Are you ready to move to the next stage?'
     ]);
     
-    // change to another scene
+    // End Game to transit to Title Scene
     this.time.delayedCall(3000, () => {
-      this.#dialogUi.hideDialogModal();
+      this.#dialogUi.hideDialog();
       this.#showDialog = false;
       this.cameras.main.fadeOut(1500, 0, 0, 0);
       this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
-        console.log(`[${WorldScene.name}:playEvent2Cutscene] Transitioning to next stage`);
-        this.scene.start(SCENE_KEYS.MINI_GAME_SCENE);
+        console.log(`[${WorldScene.name}:EventScene2] Transitioning to Title Scene`);
+        this.scene.start(SCENE_KEYS.TITLE_SCENE);
       });
     });
   }
